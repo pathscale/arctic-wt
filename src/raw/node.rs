@@ -171,6 +171,23 @@ fn replace<const CAPACITY: usize, M: ribbit::Pack<Packed: edge::Meta>, H: Header
     (Smo::ReplaceNode, edge)
 }
 
+unsafe fn topology_entries_for<const CAPACITY: usize, H: Header>(
+    node: &Node<CAPACITY, H>,
+) -> Vec<(u8, u16, NonNull<Atomic<edge::Raw>>)> {
+    let mut keys = H::KeyIter::default();
+    node.keys(
+        Unbound::<()>::default(),
+        Unbound::<()>::default(),
+        &mut keys,
+    );
+
+    keys.map(|KeyIndex { key, index }| {
+        let edge = NonNull::from(node.edges()).cast();
+        (key, index as u16, unsafe { edge.add(index as usize) })
+    })
+    .collect()
+}
+
 /// Node type discriminant.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ribbit::Pack)]
 #[ribbit(size = 2, derive(Debug, Eq))]
@@ -182,7 +199,6 @@ pub(crate) enum Type {
 }
 
 impl Type {
-    #[cfg_attr(not(test), expect(unused))]
     pub(crate) const fn capacity(self) -> usize {
         match self {
             Self::Node3 => 3,
@@ -286,6 +302,35 @@ impl Ptr {
             unsafe { Self::new::<Node47, node_47::Header>(Node47::new_unchecked(keys, edges)) }
         } else {
             unsafe { Self::new::<Node256, node_256::Header>(Node256::new_unchecked(keys, edges)) }
+        }
+    }
+
+    /// Allocate a specific adaptive node representation.
+    ///
+    /// Unlike [`Ptr::new_unchecked`], this is intended for restoring a
+    /// previously exported topology and therefore does not select a node kind
+    /// from occupancy.
+    pub(crate) unsafe fn new_exact(
+        kind: Type,
+        keys: &[u8],
+        edges: &[ribbit::Packed<edge::Raw>],
+    ) -> ribbit::Packed<Self> {
+        validate_eq!(keys.len(), edges.len());
+        validate!(keys.len() <= kind.capacity());
+
+        match kind {
+            Type::Node3 => unsafe {
+                Self::new::<Node3, Atomic<node_3::Header>>(Node3::new_unchecked(keys, edges))
+            },
+            Type::Node15 => unsafe {
+                Self::new::<Node15, Atomic<node_15::Header>>(Node15::new_unchecked(keys, edges))
+            },
+            Type::Node47 => unsafe {
+                Self::new::<Node47, node_47::Header>(Node47::new_unchecked(keys, edges))
+            },
+            Type::Node256 => unsafe {
+                Self::new::<Node256, node_256::Header>(Node256::new_unchecked(keys, edges))
+            },
         }
     }
 
@@ -506,6 +551,19 @@ impl PtrPacked {
             .map(|raw| unsafe { Edge::<M>::from_raw_ref(raw) })
             .filter(|edge| !edge.load_packed(Ordering::Relaxed).is_null())
             .count() as u8
+    }
+
+    /// Return child keys, physical edge slots, and edge addresses.
+    ///
+    /// This deliberately preserves slot identity for pointer-free topology
+    /// snapshots. It is not used by point operations.
+    pub(crate) unsafe fn topology_entries(self) -> Vec<(u8, u16, NonNull<Atomic<edge::Raw>>)> {
+        self.dispatch(
+            |node| unsafe { topology_entries_for(node.as_ref()) },
+            |node| unsafe { topology_entries_for(node.as_ref()) },
+            |node| unsafe { topology_entries_for(node.as_ref()) },
+            |node| unsafe { topology_entries_for(node.as_ref()) },
+        )
     }
 
     pub(crate) unsafe fn freeze<M: ribbit::Pack<Packed: edge::Meta>>(self) {

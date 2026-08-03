@@ -7,7 +7,6 @@ use fearless_simd::Select;
 use fearless_simd::Simd;
 use fearless_simd::SimdBase as _;
 use fearless_simd::SimdInt;
-use fearless_simd::SimdInto as _;
 use fearless_simd::SimdMask;
 use fearless_simd::mask8x16;
 use fearless_simd::mask16x16;

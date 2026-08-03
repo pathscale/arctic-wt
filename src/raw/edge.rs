@@ -63,7 +63,7 @@ impl<M: ribbit::Pack<Packed: Meta>> Edge<M> {
 
     /// Create an edge with the given metadata and node.
     #[inline]
-    pub(super) fn new_node(
+    pub(crate) fn new_node(
         meta: ribbit::Packed<M>,
         node: ribbit::Packed<node::Ptr>,
     ) -> ribbit::Packed<Self> {
@@ -209,7 +209,7 @@ impl<M: ribbit::Pack<Packed: Meta>> EdgePacked<M> {
 
     /// Erase this edge's metadata type.
     #[inline]
-    pub(super) fn erase(self) -> ribbit::Packed<edge::Raw> {
+    pub(crate) fn erase(self) -> ribbit::Packed<edge::Raw> {
         ribbit::Packed::<edge::Raw>::new(self.into_raw())
     }
 }

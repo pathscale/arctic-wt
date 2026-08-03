@@ -59,8 +59,17 @@ impl<K: Key> Map<K> {
     }
 
     #[inline]
-    fn root(&self) -> &Atomic<Edge<K::Edge>> {
+    pub(crate) fn root(&self) -> &Atomic<Edge<K::Edge>> {
         &self.0
+    }
+
+    /// Replace the root while the map is exclusively owned.
+    ///
+    /// This is used only by pointer-free topology restoration. The caller must
+    /// ensure the current root is empty so no allocation is leaked.
+    pub(crate) fn set_empty_root(&mut self, root: ribbit::Packed<Edge<K::Edge>>) {
+        validate!(self.0.get_mut_packed().is_null());
+        *self.0.get_mut_packed() = root;
     }
 }
 
