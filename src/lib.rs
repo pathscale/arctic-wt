@@ -164,6 +164,7 @@ pub mod sequential;
 pub mod stat;
 #[doc(hidden)]
 pub mod sync;
+pub mod topology;
 
 #[doc(inline)]
 pub use raw::Key;
