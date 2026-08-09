@@ -1,6 +1,7 @@
 use arctic::Order;
 use arctic::concurrent;
 use arctic::sequential;
+use std::sync::Barrier;
 
 #[test]
 fn turso_range_24230c111c599daff93a7abc11c5c72b33d0ebfd() {
@@ -50,4 +51,30 @@ fn range_common_prefix_72c2fceda258b00fc2e9d4a805b28e9ad8e8107d() {
             assert_eq!(key, NEEDLE);
             assert_eq!(value, 0);
         })
+}
+
+#[test]
+fn disjoint_crud_remains_immediately_visible_under_contention() {
+    let map = concurrent::Map::<u64, Box<u64>>::default();
+    let barrier = Barrier::new(9);
+
+    std::thread::scope(|scope| {
+        for worker in 0..8u64 {
+            let map = &map;
+            let barrier = &barrier;
+            scope.spawn(move || {
+                barrier.wait();
+                for sequence in 0..10_000u64 {
+                    let key = worker * 10_000 + sequence;
+                    map.insert(key, Box::new(key + 1))
+                        .unwrap_or_else(|_| panic!("disjoint key already existed: {key}"));
+                    assert_eq!(map.get(&key).as_deref().copied(), Some(key + 1));
+                    assert_eq!(map.remove(&key).as_deref().copied(), Some(key + 1));
+                }
+            });
+        }
+        barrier.wait();
+    });
+
+    assert!(map.all().entries(Order::Ascend).next().is_none());
 }

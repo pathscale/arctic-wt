@@ -95,11 +95,6 @@ impl<T: Terminate> edge::Meta for SlicePacked<T> {
     }
 
     #[inline]
-    fn is_terminate(self) -> bool {
-        self.terminate().get()
-    }
-
-    #[inline]
     fn with_frozen(self, frozen: bool) -> Self {
         self.with_frozen(frozen)
     }
