@@ -67,6 +67,8 @@ impl<K: Key> Map<K> {
     ///
     /// This is used only by pointer-free topology restoration. The caller must
     /// ensure the current root is empty so no allocation is leaked.
+    #[cold]
+    #[inline(never)]
     pub(crate) fn set_empty_root(&mut self, root: ribbit::Packed<Edge<K::Edge>>) {
         validate!(self.0.get_mut_packed().is_null());
         *self.0.get_mut_packed() = root;

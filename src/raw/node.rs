@@ -171,6 +171,8 @@ fn replace<const CAPACITY: usize, M: ribbit::Pack<Packed: edge::Meta>, H: Header
     (Smo::ReplaceNode, edge)
 }
 
+#[cold]
+#[inline(never)]
 unsafe fn topology_entries_for<const CAPACITY: usize, H: Header>(
     node: &Node<CAPACITY, H>,
 ) -> Vec<(u8, u16, NonNull<Atomic<edge::Raw>>)> {
@@ -310,6 +312,8 @@ impl Ptr {
     /// Unlike [`Ptr::new_unchecked`], this is intended for restoring a
     /// previously exported topology and therefore does not select a node kind
     /// from occupancy.
+    #[cold]
+    #[inline(never)]
     pub(crate) unsafe fn new_exact(
         kind: Type,
         keys: &[u8],
@@ -557,6 +561,8 @@ impl PtrPacked {
     ///
     /// This deliberately preserves slot identity for pointer-free topology
     /// snapshots. It is not used by point operations.
+    #[cold]
+    #[inline(never)]
     pub(crate) unsafe fn topology_entries(self) -> Vec<(u8, u16, NonNull<Atomic<edge::Raw>>)> {
         self.dispatch(
             |node| unsafe { topology_entries_for(node.as_ref()) },
