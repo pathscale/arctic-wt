@@ -583,3 +583,37 @@ where
         self.reader = self.reader.prefix(self.reader.len() - len);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use core::sync::atomic::Ordering;
+
+    use super::*;
+    use crate::raw::key::Read as _;
+
+    /// A reader trimmed by [`Cursor::trim`] during a concurrent recursive
+    /// remove keeps the removed key's bytes in its buffer past `len`
+    /// (integer readers do not zero the tail). When a remove retry
+    /// re-traverses after racing a neighbor-insert split plus a reinsert of
+    /// the same key, `traverse_node` must not over-match a value edge with
+    /// those trailing bytes: it must return `Err` so the caller re-traverses,
+    /// instead of hitting `unreachable!("Prefix condition")`.
+    #[test]
+    fn traverse_node_trimmed_reader_ignores_buffer_tail() {
+        let key = 0x0101u16;
+
+        // A single 2-byte key is stored as one value edge at the root.
+        let mut map = crate::sequential::Map::<u16, u64>::new();
+        assert!(map.insert(key, 7).is_ok());
+
+        // Simulate the remove retry: the cursor's reader has been trimmed
+        // all the way down, but its buffer still holds the removed key's
+        // bytes, which exactly match the (reinserted) value edge's prefix.
+        let reader = <u16 as crate::raw::Key>::Read::from(&key);
+        let mut cursor = unsafe { Cursor::<_, path::Full<_>>::new(map.raw.root(), reader) };
+        cursor.trim(reader.len());
+
+        let edge = cursor.edge().load_packed(Ordering::Relaxed);
+        assert!(cursor.traverse_node(edge).is_err());
+    }
+}

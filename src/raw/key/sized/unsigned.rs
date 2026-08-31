@@ -154,7 +154,17 @@ impl<N: Native> key::Read for Reader<N> {
 
     #[inline]
     fn match_prefix(&self, edge: <Self::Edge as ribbit::Pack>::Packed) -> Self::Len {
-        Bit((edge.raw() ^ self.buffer.most_significant_u64()).leading_zeros() as u8)
+        // NOTE: `buffer` may contain arbitrary bits beyond `len` (see the
+        // struct definition), so the reported match must be clamped to `len`.
+        // Otherwise a reader trimmed by `Cursor::trim` during a concurrent
+        // recursive remove can over-match a value edge that shares the removed
+        // key's trailing bytes, and `Cursor::traverse_node` then hits
+        // `unreachable!("Prefix condition")`. This mirrors the slice readers,
+        // which only compare the first `len` bytes.
+        Bit(
+            ((edge.raw() ^ self.buffer.most_significant_u64()).leading_zeros() as u8)
+                .min(self.len.0),
+        )
     }
 
     #[inline]
@@ -338,6 +348,94 @@ macro_rules! impl_native {
             }
         )*
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use ribbit::u6;
+
+    use super::Bit;
+    use super::Reader;
+    use crate::raw::edge;
+    use crate::raw::key::Read as _;
+
+    fn bits(bytes: u8) -> Bit {
+        Bit::from(u6::new(bytes * 8))
+    }
+
+    /// A reader trimmed by `prefix` retains the full key's bits in its buffer
+    /// past `len`; `match_prefix` must still never report a match longer than
+    /// `len`, or a concurrent remove can over-match a value edge and hit
+    /// `unreachable!("Prefix condition")` in `Cursor::traverse_node`.
+    #[test]
+    fn match_prefix_clamps_to_len() {
+        let key = 0x1122_3344_5566_7788u64;
+
+        for trim in 0..8u8 {
+            let len = bits(trim);
+            let reader = Reader::from(key).prefix(len);
+
+            for edge_bytes in 0..=7u8 {
+                let edge = edge::Be::new(key, u6::new(edge_bytes * 8));
+                let matched = reader.match_prefix(edge);
+                assert!(
+                    matched <= reader.len(),
+                    "trimmed reader (len {len:?}) reported match {matched:?} \
+                     against edge of {edge_bytes} bytes",
+                );
+            }
+        }
+    }
+
+    /// Same property for readers produced by `Split::split_last`, which also
+    /// keep the split-off byte in the buffer.
+    #[test]
+    fn match_prefix_clamps_split_reader() {
+        let key = 0xAABB_CCDD_EEFF_0011u64;
+        let (reader, last) = <u64 as crate::raw::key::Split>::split_last(&key);
+        assert_eq!(last, 0x11);
+
+        let edge = edge::Be::new(key, u6::new(56));
+        assert!(reader.match_prefix(edge) <= reader.len());
+    }
+}
+
+#[cfg(all(test, feature = "proptest"))]
+mod proptests {
+    use proptest::prelude::*;
+    use ribbit::u6;
+
+    use super::Bit;
+    use super::Reader;
+    use crate::raw::edge;
+    use crate::raw::key::Read as _;
+
+    proptest::proptest! {
+        #![proptest_config(proptest::test_runner::Config::with_cases(100_000))]
+
+        /// A trimmed integer reader never reports a match longer than its
+        /// own length, regardless of the bits left in the buffer tail.
+        #[test]
+        fn match_prefix_never_exceeds_len(
+            key in any::<u64>(),
+            edge_key in any::<u64>(),
+            trim in 0..8u8,
+            edge_bytes in 0..=7u8,
+        ) {
+            let len = Bit::from(u6::new(trim * 8));
+            let reader = Reader::from(key).prefix(len);
+            let edge = edge::Be::new(edge_key, u6::new(edge_bytes * 8));
+
+            let matched = reader.match_prefix(edge);
+            prop_assert!(matched <= reader.len());
+
+            // And an exact match may only be reported when the edge
+            // actually fits within the trimmed key.
+            if let Some(exact) = reader.match_exact(edge) {
+                prop_assert!(Bit::from(exact) <= reader.len());
+            }
+        }
+    }
 }
 
 impl_native!(
