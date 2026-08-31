@@ -255,3 +255,44 @@ mod inverted_range_proptest {
         }
     }
 }
+
+/// `SequentialMap::remove_non_recursive` used to hardcode the full path type
+/// internally, silently behaving as the recursive `remove` and collapsing
+/// empty nodes it documents leaving in place.
+#[test]
+fn sequential_remove_non_recursive_keeps_empty_nodes() {
+    use arctic::topology;
+
+    // Two 16-byte keys diverging at the first byte: each branch is a
+    // 7-byte edge, a single-child node, and a 7-byte value edge.
+    const A: u128 = 0x0101_0101_0101_0101_0101_0101_0101_0101;
+    const B: u128 = 0x0202_0202_0202_0202_0202_0202_0202_0202;
+
+    let build = || {
+        let mut map = sequential::Map::<u128, u64>::new();
+        assert!(map.insert(A, 1).is_ok());
+        assert!(map.insert(B, 2).is_ok());
+        map
+    };
+
+    // The recursive remove collapses B's emptied single-child node, leaving
+    // a valid topology.
+    let mut recursive = build();
+    assert_eq!(recursive.remove(&B), Some(2));
+    assert!(recursive.export_topology(|value| *value).is_ok());
+
+    // The non-recursive remove must leave the emptied node in place, which
+    // the topology export detects as a node without live branches.
+    let mut non_recursive = build();
+    assert_eq!(non_recursive.remove_non_recursive(&B), Some(2));
+    assert_eq!(
+        non_recursive.export_topology(|value| *value),
+        Err(topology::Error::EmptyNode),
+    );
+
+    // The map still behaves correctly around the leftover node.
+    assert_eq!(non_recursive.get(&A), Some(&1));
+    assert_eq!(non_recursive.get(&B), None);
+    assert!(non_recursive.insert(B, 3).is_ok());
+    assert_eq!(non_recursive.get(&B), Some(&3));
+}

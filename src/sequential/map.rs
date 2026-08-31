@@ -483,7 +483,9 @@ where
         &mut self,
         reader: K::Read<'k>,
     ) -> Option<u64> {
-        let mut cursor = unsafe { self.raw.cursor::<path::Full<_>>(reader) };
+        // NOTE: with `path::Discard` (see `Map::remove_non_recursive`),
+        // `pop` below returns `Err` immediately and no nodes are collapsed.
+        let mut cursor = unsafe { self.raw.cursor::<P>(reader) };
         let walk = unsafe { *cursor.edge_mut().get_mut_packed() };
 
         let update = unsafe { cursor.traverse_value(walk) }?;
