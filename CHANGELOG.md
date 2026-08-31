@@ -1,3 +1,10 @@
+# v0.1.6
+
+- Clamp integer-reader `match_prefix` to the reader length, fixing a reachable `unreachable!` panic in concurrent remove racing a neighbor-insert split and reinsert.
+- Return an empty iterator for inverted range bounds instead of panicking (debug) or yielding wrapped duplicates (release).
+- Require `V: Send` for `ConcurrentMap` to be `Sync`; `remove()` migrates the value drop across threads.
+- Wire the path type through sequential `remove_raw` so `remove_non_recursive` is actually non-recursive.
+
 # v0.1.4
 
 - Port SIMD code to `fearless_simd`.
