@@ -354,6 +354,20 @@ where
     fn common_prefix(&self) -> R {
         R::default()
     }
+
+    /// Whether this range's lower bound is strictly greater than its upper
+    /// bound, so the range contains no keys.
+    ///
+    /// Inverted bounds must never reach per-node byte bounds: they would
+    /// overflow `u16` in `KeyIter256` in debug builds, wrap and repeatedly
+    /// yield every key in release builds, and spuriously include the upper
+    /// byte in the Node15/47 SIMD mask. Scans validate this once at
+    /// construction and return an empty iterator instead.
+    #[doc(hidden)]
+    #[inline]
+    fn is_inverted(&self) -> bool {
+        false
+    }
 }
 
 impl<R: key::Read, T: Into<R> + Copy> Range<R> for RangeInclusive<T> {
@@ -377,6 +391,27 @@ impl<R: key::Read, T: Into<R> + Copy> Range<R> for RangeInclusive<T> {
         let lower = (*self.start()).into();
         let upper = (*self.end()).into();
         lower.common_prefix(upper)
+    }
+
+    #[inline]
+    fn is_inverted(&self) -> bool {
+        let lower: R = (*self.start()).into();
+        let upper: R = (*self.end()).into();
+
+        // Compare the first byte past the common prefix. Keys are ordered
+        // lexicographically, and a terminated key's terminator byte sorts
+        // below every content byte, so a bound that is a proper prefix of
+        // the other is the smaller one.
+        let common = lower.common_prefix(upper).len();
+        let lower = lower.suffix(common);
+        let upper = upper.suffix(common);
+
+        let zero = R::Len::ZERO.into();
+        match (lower.get_byte(zero), upper.get_byte(zero)) {
+            (Some(lower), Some(upper)) => lower > upper,
+            (Some(_), None) => true,
+            (None, _) => false,
+        }
     }
 }
 

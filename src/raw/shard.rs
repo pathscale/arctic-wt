@@ -59,6 +59,15 @@ where
         R: Range<K::Read<'k>>,
     {
         validate_eq!(prefix, range.common_prefix());
+
+        // An inverted range (lower bound greater than upper bound) contains
+        // no keys; it must not reach per-node byte bounds. See
+        // `raw::iter::Range::is_inverted`.
+        if range.is_inverted() {
+            crate::cold();
+            return unsafe { Shard::new(core::ptr::null_mut(), Edge::NULL, prefix, range) };
+        }
+
         let mut cursor = unsafe { Cursor::<_, path::Len<_>>::new(root, prefix) };
         let Some(edge) = cursor.traverse_prefix() else {
             return unsafe { Shard::new(core::ptr::null_mut(), Edge::NULL, prefix, range) };

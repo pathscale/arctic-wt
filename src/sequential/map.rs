@@ -397,6 +397,12 @@ where
     }
 
     /// Get an immutable reference to the subtree of keys within `range`.
+    ///
+    /// If the range's lower bound is greater than its upper bound
+    /// (e.g. `5..=3`), the returned shard is empty. This deliberately
+    /// diverges from [`BTreeMap::range`][std::collections::BTreeMap::range],
+    /// which panics: returning empty is the safe contract shared with the
+    /// concurrent map, where bounds may be computed from racing reads.
     #[inline]
     pub fn range<'k, R>(&self, range: R) -> Shard<'_, 'k, K, V, R>
     where
@@ -419,6 +425,8 @@ where
     }
 
     /// Get a mutable reference to the subtree of keys within `range`.
+    ///
+    /// An inverted range yields an empty shard; see [`Map::range`].
     #[inline]
     pub fn range_mut<'k, R>(&mut self, range: R) -> ShardMut<'_, 'k, K, V, R>
     where

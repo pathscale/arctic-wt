@@ -546,6 +546,12 @@ where
 
     /// Get an immutable reference to the subtree of keys within `range`.
     ///
+    /// If the range's lower bound is greater than its upper bound
+    /// (e.g. `5..=3`), the returned shard is empty. This deliberately
+    /// diverges from [`BTreeMap::range`][std::collections::BTreeMap::range],
+    /// which panics: bounds passed to a concurrent map may be computed from
+    /// racing reads, so an empty result is the safe contract.
+    ///
     /// # Examples
     ///
     /// ```rust
