@@ -1,5 +1,6 @@
 //! Auxiliary types for use with [`ConcurrentMap`][crate::concurrent::Map].
 
+use core::marker::PhantomData;
 use core::ops::ControlFlow;
 use core::ops::RangeFull;
 use core::sync::atomic::Ordering;
@@ -100,6 +101,21 @@ pub type Upserted<'g, K, V, S> = value::Upserted<Guard<'g, K, V, S>, V>;
 pub struct Map<K: Key, V: Value, S = smr::Default> {
     smr: S,
     seq: sequential::Map<K, V>,
+    /// A shared `Map` moves values between threads: `remove` on thread B
+    /// takes ownership of (and eventually drops) a value inserted on thread
+    /// A. `Mutex<V>` is `Sync` only if `V: Send`, so this marker adds that
+    /// bound to the map's `Sync` impl (on top of `V: Sync` from `seq`).
+    ///
+    /// ```compile_fail
+    /// // `SyncNotSend` may be referenced from any thread, but must be
+    /// // dropped on the thread that created it.
+    /// struct SyncNotSend(*mut u8);
+    /// unsafe impl Sync for SyncNotSend {}
+    ///
+    /// fn assert_sync<T: Sync>() {}
+    /// assert_sync::<arctic::ConcurrentMap<u64, Box<SyncNotSend>>>();
+    /// ```
+    _value: PhantomData<std::sync::Mutex<V>>,
 }
 
 impl<K: Key, V: Value, S: Default> Default for Map<K, V, S> {
@@ -121,6 +137,7 @@ impl<K: Key, V: Value, S> Map<K, V, S> {
         Self {
             smr,
             seq: sequential::Map::<K, V>::new(),
+            _value: PhantomData,
         }
     }
 }
@@ -1575,6 +1592,7 @@ where
         Self {
             smr: S::default(),
             seq,
+            _value: PhantomData,
         }
     }
 }
@@ -1592,6 +1610,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    /// The `V: Send` requirement on `Sync` (see the `_value` marker) must
+    /// not cost `Send`/`Sync` for ordinary value types.
+    #[test]
+    fn map_remains_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<crate::ConcurrentMap<u64, u64>>();
+        assert_send_sync::<crate::ConcurrentMap<u64, Box<u64>>>();
+        assert_send_sync::<crate::ConcurrentMap<u64, crate::concurrent::value::Arc<u64>>>();
+    }
+
     use core::convert::Infallible;
     use core::ops::ControlFlow;
 

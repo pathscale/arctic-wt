@@ -19,8 +19,11 @@ pub use crate::sequential::value::Arc;
 /// allocation; the pointer is stored in an edge.
 ///
 /// Note: we don't need [`Send`] or [`Sync`] bounds here.
-/// It's fine to create a concurrent map with non-Sync
+/// It's fine to create a concurrent map with non-Send or non-Sync
 /// values; the map instance just won't implement Sync.
+/// (The map itself must require `V: Send` for `Sync`, not only `V: Sync`,
+/// because `remove` hands ownership of a value inserted on another thread
+/// to the removing thread, which eventually drops it there.)
 pub trait Value: sequential::Value + Borrow<Self::Borrowed> {
     /// Whether this is an indirect value (otherwise it is inline).
     const INDIRECT: bool;
