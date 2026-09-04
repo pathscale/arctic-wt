@@ -5,6 +5,7 @@ use crate::raw::Cursor;
 use crate::raw::Edge;
 use crate::raw::Key;
 use crate::raw::cursor;
+use crate::raw::edge;
 use crate::raw::iter::Order;
 use crate::raw::iter::PostorderIter;
 use crate::sync::Atomic;
@@ -23,6 +24,20 @@ impl<K: Key> Map<K> {
 
     pub(crate) fn postorder<'g>(&'g mut self, order: Option<Order>) -> PostorderIter<'g, K::Edge> {
         unsafe { PostorderIter::new(self.root(), order) }
+    }
+
+    /// Drain the exclusively owned tree without building ordered node
+    /// iterators. Destruction does not need key order, so scanning physical
+    /// edge slots avoids the per-node iterator allocations used by scans.
+    pub(crate) fn drain(&mut self, mut drop_value: impl FnMut(u64)) {
+        let root = std::mem::replace(self.0.get_mut_packed(), Edge::<K::Edge>::NULL);
+        match root.child() {
+            None => {}
+            Some(edge::Child::Value(value)) => drop_value(value),
+            Some(edge::Child::Node(node)) => unsafe {
+                node.deallocate_tree::<K::Edge, _>(drop_value)
+            },
+        }
     }
 
     #[inline]

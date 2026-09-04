@@ -1,10 +1,10 @@
 //! Implementations of [`Smr`].
 //!
-//! By default, [`ConcurrentMap`][crate::concurrent::Map] uses [seize](https://docs.rs/seize/0.5.1/seize/)
-//! for safe memory reclamation. Support for
-//! [crossbeam-epoch](https://docs.rs/crossbeam-epoch/0.9.18/crossbeam_epoch/)
-//! and hazard keys can be enabled with the
-//! `smr-seize` and `smr-hazard` Cargo features, respectively.
+//! By default, [`ConcurrentMap`][crate::concurrent::Map] uses
+//! [ps-reclaim](https://docs.rs/ps-reclaim) for safe memory reclamation.
+//! Support for [crossbeam-epoch](https://docs.rs/crossbeam-epoch/0.9.18/crossbeam_epoch/),
+//! seize, and hazard keys can be selected with the `smr-epoch`, `smr-seize`,
+//! and `smr-hazard` Cargo features, respectively.
 //! Downstream users can also implement [`Smr`] and [`Guard`]
 //! to provide their own SMR backends.
 
@@ -15,6 +15,8 @@ mod epoch;
 pub mod hazard;
 /// Auxiliary types for use with no-op SMR.
 pub mod no_op;
+#[cfg(feature = "smr-ps-reclaim")]
+mod ps_reclaim;
 #[cfg(feature = "smr-seize")]
 mod seize;
 
@@ -26,12 +28,18 @@ pub use epoch::Epoch;
 #[cfg(feature = "smr-hazard")]
 pub use hazard::Hazard;
 pub use no_op::NoOp;
+#[cfg(feature = "smr-ps-reclaim")]
+pub use ps_reclaim::PsReclaim;
 #[cfg(feature = "smr-seize")]
 pub use seize::Seize;
 
 cfg_select! {
-    feature = "smr-seize" => {
+    feature = "smr-ps-reclaim" => {
         /// Default [`Smr`] backend.
+        pub type Default = PsReclaim;
+    }
+    feature = "smr-seize" => {
+        /// Default [`Smr`] backend when ps-reclaim is disabled explicitly.
         pub type Default = Seize;
     }
     _ => {

@@ -105,10 +105,10 @@
 //! # Feature flags
 //!
 //! **Public features**.
-//! - `smr-hazard`, `smr-epoch`, and `smr-seize` enable their
+//! - `smr-hazard`, `smr-epoch`, `smr-ps-reclaim`, and `smr-seize` enable their
 //!   respective safe memory reclamation ([`Smr`][crate::concurrent::Smr]) backends. At least
 //!   one SMR backend is required to use [`ConcurrentMap`]; by
-//!   default, seize is enabled and used.
+//!   default, ps-reclaim is enabled and used.
 //!
 //! **Development features**. These have no stability guarantees.
 //!
