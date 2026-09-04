@@ -136,7 +136,12 @@ pub(crate) enum Counter {
     UpdatePessimistic,
 
     #[cfg_attr(
-        not(any(feature = "smr-hazard", feature = "smr-seize", feature = "smr-epoch")),
+        not(any(
+            feature = "smr-hazard",
+            feature = "smr-seize",
+            feature = "smr-epoch",
+            feature = "smr-ps-reclaim"
+        )),
         expect(unused)
     )]
     Retire,

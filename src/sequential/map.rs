@@ -1,8 +1,6 @@
 //! Auxiliary types for use with [`SequentialMap`].
 
-use core::convert::Infallible;
 use core::marker::PhantomData;
-use core::ops::ControlFlow;
 use core::ops::RangeFull;
 use core::ptr::NonNull;
 #[cfg_attr(not(doc), expect(unused))]
@@ -585,19 +583,11 @@ where
     V: Value,
 {
     fn drop(&mut self) {
-        let ControlFlow::Continue(()) = self.raw.postorder(None).try_fold((), |(), (_, child)| {
+        self.raw.drain(|value| {
             stat::increment(stat::Counter::FreeDrop);
-
-            // SAFETY: we have exclusive access to nodes and values in destructor
-            match child {
-                edge::Child::Value(value) => drop(unsafe { V::from_raw_unchecked(value) }),
-                edge::Child::Node(node) => unsafe {
-                    stat::increment(stat::Counter::FreeDrop);
-                    node.deallocate();
-                },
-            };
-
-            ControlFlow::<Infallible>::Continue(())
+            // SAFETY: `Drop` has exclusive access and `drain` visits every
+            // live raw value exactly once.
+            drop(unsafe { V::from_raw_unchecked(value) });
         });
     }
 }

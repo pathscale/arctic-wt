@@ -1,6 +1,6 @@
 [package]
 name = "arctic-wt"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 description = "Lock-free adaptive radix tree"
 repository = "https://github.com/pathscale/arctic-wt"
@@ -13,7 +13,7 @@ name = "arctic"
 path = "src/lib.rs"
 
 [features]
-default = ["smr-seize"]
+default = ["smr-ps-reclaim"]
 
 stat = ["dep:serde", "dep:base64", "dep:hdrhistogram"]
 stat-garbage = []
@@ -33,6 +33,7 @@ opt-no-dispatch = []
 
 smr-hazard = []
 smr-epoch = ["dep:crossbeam-epoch"]
+smr-ps-reclaim = ["dep:ps-reclaim"]
 smr-seize = ["dep:seize"]
 
 validate = []
@@ -47,6 +48,7 @@ crossbeam-epoch = { version = "0.9.18", optional = true }
 hdrhistogram = { version = "7.5.4", optional = true, default-features = false, features = ["serialization"] }
 libc = { version = "0.2.176", optional = true }
 proptest = { version = "1.9.0", optional = true }
+ps-reclaim = { version = "^0.1", optional = true }
 ribbit = { version = "0.2.1", features = ["atomic-u128"] }
 seize = { version = "0.5.1", optional = true }
 serde = { version = "1.0.219", optional = true, features = ["derive"] }

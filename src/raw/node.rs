@@ -514,6 +514,37 @@ impl PtrPacked {
         dispatch_all!(self, |node| drop(unsafe { Box::from_raw(node.as_ptr()) }))
     }
 
+    /// Deallocate a whole exclusively owned subtree in arbitrary order.
+    ///
+    /// Unlike ordered traversal this scans the physical edge arrays directly:
+    /// inactive slots are null, and destruction has no use for their key-byte
+    /// metadata. Parent nodes can be freed after their child pointers have
+    /// been copied because every child is a separate allocation.
+    ///
+    /// # Safety
+    ///
+    /// The caller must own this subtree exclusively, and `drop_value` must
+    /// consume every live raw value exactly once.
+    pub(crate) unsafe fn deallocate_tree<M, F>(self, mut drop_value: F)
+    where
+        M: ribbit::Pack<Packed: edge::Meta>,
+        F: FnMut(u64),
+    {
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            let edges = dispatch_all!(node, |ptr| unsafe { ptr.as_ref() }.edges());
+            for raw in edges {
+                let edge = unsafe { Edge::<M>::from_raw_ref(raw) }.load_packed(Ordering::Relaxed);
+                match edge.child() {
+                    None => {}
+                    Some(edge::Child::Value(value)) => drop_value(value),
+                    Some(edge::Child::Node(child)) => pending.push(child),
+                }
+            }
+            unsafe { node.deallocate() };
+        }
+    }
+
     #[inline(always)]
     fn dispatch<N3, N15, N47, N256, T>(
         self,
