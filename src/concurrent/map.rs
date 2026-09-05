@@ -144,6 +144,16 @@ impl<K: Key, V: Value, S> Map<K, V, S> {
 
 /// # Basic operations
 impl<K: Key, V: Value, S: Smr<K, V>> Map<K, V, S> {
+    /// Bytes occupied by adaptive nodes currently reachable from the root.
+    ///
+    /// This is an exact-size, weakly consistent snapshot: a concurrent
+    /// structural mutation may move the observation between generations, but
+    /// the SMR guard keeps every traversed allocation alive.
+    pub fn allocated_node_bytes(&self) -> usize {
+        let _guard = self.smr.guard(K::Read::default());
+        unsafe { self.seq.raw.allocated_node_bytes() }
+    }
+
     /// Get a mutable view as a [`SequentialMap`] for temporary access to a more
     /// efficient and flexible single-threaded API. For permanent access, use
     /// [`From`].

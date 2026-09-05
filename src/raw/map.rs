@@ -78,6 +78,35 @@ impl<K: Key> Map<K> {
         &self.0
     }
 
+    /// Bytes occupied by adaptive node allocations reachable from the root.
+    ///
+    /// The caller must protect the full tree from reclamation for the walk.
+    /// Concurrent structural changes can make this a weak snapshot, but every
+    /// node counted is protected and its concrete allocation size is exact.
+    pub(crate) unsafe fn allocated_node_bytes(&self) -> usize {
+        let root = self
+            .root()
+            .load_packed(core::sync::atomic::Ordering::Acquire);
+        let Some(child) = root.child() else { return 0 };
+        let edge::Child::Node(root) = child else {
+            return 0;
+        };
+
+        let mut bytes = 0;
+        let mut pending = vec![root];
+        while let Some(node) = pending.pop() {
+            bytes += node.allocation_size();
+            for (_, _, pointer) in unsafe { node.topology_entries() } {
+                let edge = unsafe { Edge::<K::Edge>::from_raw_ref(pointer.as_ref()) }
+                    .load_packed(core::sync::atomic::Ordering::Acquire);
+                if let Some(edge::Child::Node(child)) = edge.child() {
+                    pending.push(child);
+                }
+            }
+        }
+        bytes
+    }
+
     /// Replace the root while the map is exclusively owned.
     ///
     /// This is used only by pointer-free topology restoration. The caller must
