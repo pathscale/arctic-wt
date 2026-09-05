@@ -4,6 +4,33 @@ use arctic::sequential;
 use std::sync::Barrier;
 
 #[test]
+fn validated_string_key_has_prefix_semantics_in_prefix_scan() {
+    use arctic::key::{BoxedStr, NonNull, Str};
+
+    const KEYS: [&str; 4] = ["fn:a/loop:0", "fn:a/loop:1", "fn:a/loop:2", "fn:b/loop:0"];
+
+    let mut sequential = sequential::Map::<BoxedStr<NonNull>, u64>::new();
+    let concurrent = concurrent::Map::<BoxedStr<NonNull>, u64>::default();
+    for (index, key) in KEYS.into_iter().enumerate() {
+        let key = Str::<NonNull>::new(key).expect("No null byte");
+        let _ = sequential.upsert(key, index as u64);
+        concurrent
+            .insert(key, index as u64)
+            .expect("Key not present");
+    }
+
+    let prefix = Str::<NonNull>::new("fn:a/").expect("No null byte");
+    assert_eq!(
+        sequential
+            .prefix(prefix.into())
+            .values(Order::Ascend)
+            .count(),
+        3
+    );
+    assert_eq!(concurrent.prefix(prefix).values(Order::Ascend).count(), 3);
+}
+
+#[test]
 fn turso_range_24230c111c599daff93a7abc11c5c72b33d0ebfd() {
     // https://github.com/jennyhour/turso-arctic/blob/2c7cbf300adacf8482346d6f927753c9074d8bd7/core/mvcc/database/mod.rs#L88-L111
     const fn turso_row_id(row_id: i64) -> u128 {

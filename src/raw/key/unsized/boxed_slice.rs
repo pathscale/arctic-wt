@@ -336,6 +336,14 @@ impl<T: Terminate> key::Read for Reader<'_, T> {
     }
 
     #[inline]
+    fn into_prefix(self) -> Self {
+        Self {
+            terminate: T::new(false),
+            ..self
+        }
+    }
+
+    #[inline]
     fn prefix(self, end: Self::Len) -> Self {
         validate!(end <= self.len());
         let end = end.bytes();
