@@ -24,6 +24,7 @@ use crate::raw::cursor::Path;
 use crate::raw::cursor::path;
 use crate::raw::edge::Meta as _;
 use crate::raw::key::Len as _;
+use crate::raw::key::Read as _;
 use crate::sequential;
 use crate::stat;
 
@@ -566,7 +567,7 @@ where
         &'g self,
         prefix: impl Into<K::Read<'k>>,
     ) -> iter::Shard<'g, 'k, K, V, RangeFull, Guard<'g, K, V, S>> {
-        let prefix = prefix.into();
+        let prefix = prefix.into().into_prefix();
         let guard = self.smr.guard(prefix);
         unsafe { Shard::new(guard, self.seq.raw.prefix(prefix)) }
     }

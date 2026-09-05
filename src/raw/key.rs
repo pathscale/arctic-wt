@@ -173,6 +173,16 @@ pub(crate) trait Read: Copy + fmt::Debug + Default + Eq {
 
     fn match_prefix(&self, meta: <Self::Edge as ribbit::Pack>::Packed) -> Self::Len;
 
+    /// Interpret this reader as a scan prefix rather than an exact key.
+    ///
+    /// Unsized key readers may carry an implicit terminator for exact lookup.
+    /// A prefix names only the caller-provided bytes, so those readers clear
+    /// that terminator here. Fixed-width readers have no separate terminator.
+    #[inline]
+    fn into_prefix(self) -> Self {
+        self
+    }
+
     fn prefix(self, end: Self::Len) -> Self;
     fn suffix(self, start: Self::Len) -> Self;
     fn common_prefix(self, other: Self) -> Self;

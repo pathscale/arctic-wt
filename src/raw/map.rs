@@ -8,6 +8,7 @@ use crate::raw::cursor;
 use crate::raw::edge;
 use crate::raw::iter::Order;
 use crate::raw::iter::PostorderIter;
+use crate::raw::key::Read as _;
 use crate::sync::Atomic;
 
 #[repr(transparent)]
@@ -58,7 +59,7 @@ impl<K: Key> Map<K> {
         &self,
         prefix: impl Into<K::Read<'k>>,
     ) -> raw::Shard<'_, 'k, K, RangeFull> {
-        unsafe { raw::Shard::<K>::new_prefix(self.root(), prefix.into()) }
+        unsafe { raw::Shard::<K>::new_prefix(self.root(), prefix.into().into_prefix()) }
     }
 
     #[inline]

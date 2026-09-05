@@ -232,6 +232,11 @@ impl<T: Terminate> key::Read for Reader<'_, T> {
     }
 
     #[inline]
+    fn into_prefix(self) -> Self {
+        Self(self.0.into_prefix())
+    }
+
+    #[inline]
     fn prefix(self, end: Byte) -> Self {
         Self(self.0.prefix(end))
     }
