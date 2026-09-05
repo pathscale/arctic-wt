@@ -530,7 +530,8 @@ impl PtrPacked {
         M: ribbit::Pack<Packed: edge::Meta>,
         F: FnMut(u64),
     {
-        let mut pending = vec![self];
+        let mut pending = Vec::with_capacity(16);
+        pending.push(self);
         while let Some(node) = pending.pop() {
             let edges = dispatch_all!(node, |ptr| unsafe { ptr.as_ref() }.edges());
             for raw in edges {
@@ -576,6 +577,17 @@ impl PtrPacked {
 
 /// # Edge metadata dependent methods
 impl PtrPacked {
+    /// Heap allocation occupied by this adaptive node representation.
+    pub(crate) fn allocation_size(self) -> usize {
+        dispatch!(
+            self.r#type(),
+            core::mem::size_of::<Node3>(),
+            core::mem::size_of::<Node15>(),
+            core::mem::size_of::<Node47>(),
+            core::mem::size_of::<Node256>(),
+        )
+    }
+
     pub(crate) unsafe fn len<M: ribbit::Pack<Packed: edge::Meta>>(self) -> u8 {
         dispatch_all!(self, |node| unsafe { node.as_ref() }.edges())
             .iter()

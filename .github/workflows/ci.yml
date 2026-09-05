@@ -25,6 +25,20 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
 
+  smr-backends:
+    name: SMR backend (${{ matrix.backend }})
+    runs-on: ubicloud-standard-4
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [smr-ps-reclaim, smr-seize, smr-epoch, smr-hazard]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --no-default-features --features ${{ matrix.backend }}
+
   package:
     name: Release dry run
     runs-on: ubicloud-standard-2

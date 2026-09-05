@@ -36,20 +36,23 @@ pub struct PsReclaim {
 impl PsReclaim {
     #[inline]
     fn advance_if_needed(&self) {
-        if self.pending.load(Ordering::Acquire) < RECLAIM_BATCH {
+        if self.pending.load(Ordering::Relaxed) < RECLAIM_BATCH {
             return;
         }
 
-        let reclaimed = self.domain.advance();
+        let reclaimed = self.domain.advance_up_to(RECLAIM_BATCH);
         if reclaimed != 0 {
-            self.pending.fetch_sub(reclaimed, Ordering::AcqRel);
+            self.pending.fetch_sub(reclaimed, Ordering::Relaxed);
         }
     }
 
     #[inline]
     fn retire(&self, reclaim: impl FnOnce() + Send + 'static) {
+        // Publish the accounting before the callback becomes collectable. An
+        // advancing thread may run it as soon as `Domain::retire` returns.
+        // Reversing these two operations briefly underflows `pending`.
+        self.pending.fetch_add(1, Ordering::Relaxed);
         self.domain.retire(reclaim);
-        self.pending.fetch_add(1, Ordering::Release);
     }
 }
 
@@ -74,7 +77,7 @@ impl<K: Key, V: Value> Smr<K, V> for PsReclaim {
     }
 
     fn garbage(&self) -> u32 {
-        self.pending.load(Ordering::Acquire).min(u32::MAX as usize) as u32
+        self.pending.load(Ordering::Relaxed).min(u32::MAX as usize) as u32
     }
 }
 
@@ -115,6 +118,8 @@ mod tests {
     use super::{PsReclaim, RECLAIM_BATCH};
     use crate::ConcurrentMap;
     use crate::concurrent::Smr;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn removed_values_are_reclaimed_without_a_quiescent_map() {
@@ -129,5 +134,22 @@ mod tests {
         }
 
         assert!(Smr::<u64, Box<u64>>::garbage(map.smr()) < RECLAIM_BATCH as u32);
+    }
+
+    #[test]
+    fn one_foreground_advance_runs_at_most_one_batch() {
+        let smr = PsReclaim::default();
+        let hits = Arc::new(AtomicUsize::new(0));
+        for _ in 0..RECLAIM_BATCH * 3 {
+            let hits = hits.clone();
+            smr.retire(move || {
+                hits.fetch_add(1, Ordering::Relaxed);
+            });
+        }
+
+        smr.advance_if_needed();
+
+        assert_eq!(hits.load(Ordering::Relaxed), RECLAIM_BATCH);
+        assert_eq!(smr.pending.load(Ordering::Relaxed), RECLAIM_BATCH * 2);
     }
 }

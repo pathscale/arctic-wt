@@ -5,6 +5,11 @@
 //! Support for [crossbeam-epoch](https://docs.rs/crossbeam-epoch/0.9.18/crossbeam_epoch/),
 //! seize, and hazard keys can be selected with the `smr-epoch`, `smr-seize`,
 //! and `smr-hazard` Cargo features, respectively.
+//! SMR features are a single-choice configuration. To select a backend other
+//! than ps-reclaim, disable default features and enable exactly one `smr-*`
+//! feature. When ps-reclaim and another backend are enabled together, the
+//! default remains ps-reclaim; the other implementation is still exported for
+//! explicit type parameters.
 //! Downstream users can also implement [`Smr`] and [`Guard`]
 //! to provide their own SMR backends.
 
