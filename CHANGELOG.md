@@ -1,3 +1,10 @@
+# v0.1.10
+
+- Build without `std`. The default feature set gains `std`, so nothing changes for any existing user; with `default-features = false` the crate does not link it. `smr-ps-reclaim` and `stat-garbage` imply `std`, since ps-reclaim is `std` only and the garbage counter is this crate's only `thread_local!`. `NoOp` is what remains available without it.
+- Without `std` the SIMD level comes from `cfg!(target_feature)` at compile time rather than runtime detection, which is a `std` facility. On aarch64 that costs nothing, Neon being mandatory in the architecture; on x86 it means the scalar path unless the build asks, with `-C target-feature=+avx2` or a `target-cpu` that implies it.
+- `docs/M4-SVE-perf-review.md` records why there is no SVE path and why there will not be one on Apple silicon: measured at 34x slower than Neon for `node_47`'s search, with streaming mode amortised to nothing.
+- One new dependency, `spin`, for a `no_std` `Once` holding the SIMD level. It has no dependencies of its own.
+
 # v0.1.6
 
 - Clamp integer-reader `match_prefix` to the reader length, fixing a reachable `unreachable!` panic in concurrent remove racing a neighbor-insert split and reinsert.
