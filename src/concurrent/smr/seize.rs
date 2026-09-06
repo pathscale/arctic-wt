@@ -8,6 +8,8 @@ use crate::stat;
 
 use seize::Guard as _;
 
+use alloc::boxed::Box;
+
 /// [`seize::Collector`] backend for safe memory reclamation.
 ///
 /// Defaults to a batch size of 256, which we found to provide

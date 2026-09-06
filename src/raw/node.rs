@@ -47,6 +47,9 @@ use crate::raw::node::node_256::Node256;
 use crate::stat;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+
 /// A node is a partial mapping from `u8` to [`edge::Raw`].
 #[derive(Debug)]
 #[repr(C, align(64))]

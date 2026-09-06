@@ -118,7 +118,7 @@ mod tests {
     use super::{PsReclaim, RECLAIM_BATCH};
     use crate::ConcurrentMap;
     use crate::concurrent::Smr;
-    use std::sync::Arc;
+    use alloc::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]

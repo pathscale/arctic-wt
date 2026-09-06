@@ -14,6 +14,8 @@ use crate::raw::iter::Unbound;
 use crate::raw::node;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+
 /// Iterator over key-edge pairs.
 pub(crate) struct EntryIter<'g> {
     keys: KeyIter,
@@ -522,7 +524,7 @@ impl KeyIter15 {
     pub(super) fn sort(&mut self) {
         let len = self.0.tail;
 
-        fearless_simd::dispatch!(*crate::raw::SIMD, simd => {
+        fearless_simd::dispatch!(crate::raw::simd(), simd => {
             let ptr = NonNull::from(&mut *self).cast::<u16x16<_>>();
             let unsorted = unsafe { ptr.read() };
             let sorted = node::simd::sort_u16x16(simd, unsorted, len);
@@ -611,7 +613,7 @@ impl From<KeyIter256> for node::KeyIter {
 }
 
 impl Debug for KeyIter256 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("KeyIter256")
             .field("head", &self.head)
             .field("tail", &self.tail)
@@ -643,13 +645,13 @@ impl KeyIndex {
 }
 
 impl PartialOrd for KeyIndex {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for KeyIndex {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         // SAFETY: `Self` is repr(C) and has same size and alignment as u16
         let actual = unsafe {
             core::mem::transmute_copy::<Self, u16>(self)

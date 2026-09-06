@@ -8,6 +8,8 @@ use ribbit::u56;
 use crate::raw::edge::Len as _;
 use crate::sequential;
 
+use alloc::boxed::Box;
+
 type AtomicU64 = <u64 as crate::sync::Loose>::Atomic;
 
 pub(crate) union Set {
@@ -240,7 +242,7 @@ impl<R: ribbit::atomic::Raw<u64>> Clone for Set256<R> {
 }
 
 impl<R: ribbit::atomic::Raw<u64>> core::fmt::Debug for Set256<R> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Set256").field(&self.0).finish()
     }
 }

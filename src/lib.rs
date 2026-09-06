@@ -1,4 +1,8 @@
 #![warn(missing_docs)]
+// `not(test)` so the harness keeps its own prelude while the library under test
+// is still the `no_std` one. `cargo check --no-default-features` is what proves
+// the library does not link `std`, since a test binary cannot.
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 
 //! This is the original implementation of
 //! [Arctic: a practical lock-free adaptive radix tree](https://www.usenix.org/conference/osdi26/presentation/ni).
@@ -156,6 +160,9 @@ macro_rules! validate_eq {
         }
     };
 }
+
+#[macro_use]
+extern crate alloc;
 
 pub mod concurrent;
 pub(crate) mod raw;

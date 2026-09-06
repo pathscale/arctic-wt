@@ -299,7 +299,7 @@ mod tests {
         fn sort_u16x16_correct(input in proptest::collection::vec(u16::MIN..=u16::MAX, 0..=16)) {
             use fearless_simd::SimdBase as _;
 
-            let actual = fearless_simd::dispatch!(*crate::raw::SIMD, simd => {
+            let actual = fearless_simd::dispatch!(crate::raw::simd(), simd => {
                 let len = input.len() as u8;
                 let input = u16x16::from_fn(simd, |index| input.get(index).copied().unwrap_or(0));
                 let output = sort_u16x16(simd, input, len);
@@ -316,7 +316,7 @@ mod tests {
     // https://en.wikipedia.org/wiki/Sorting_network#Zero-one_principle
     #[test]
     fn sort_u16x16_zero_one() {
-        fearless_simd::dispatch!(*crate::raw::SIMD, simd =>{
+        fearless_simd::dispatch!(crate::raw::simd(), simd =>{
             let mut buffer = [0u16; 16];
 
             for i in 0..=u16::MAX {

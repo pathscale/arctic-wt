@@ -1,3 +1,4 @@
+#[cfg(feature = "stat-garbage")]
 use core::cell::Cell;
 use core::marker::PhantomData;
 use core::num::NonZeroU64;
@@ -9,6 +10,10 @@ use crate::concurrent::Smr;
 use crate::concurrent::Value;
 use crate::concurrent::smr;
 
+// Per-thread batching for the garbage statistic, and the only thread-local in
+// this crate. `thread_local!` needs `std`, and nothing but `stat-garbage`
+// needs this, so the feature carries the requirement rather than the crate.
+#[cfg(feature = "stat-garbage")]
 thread_local! {
     static GARBAGE_LOCAL: Cell<u32> = const { Cell::new(0) };
 }
@@ -16,6 +21,7 @@ thread_local! {
 static GARBAGE_GLOBAL: AtomicU32 = AtomicU32::new(0);
 
 // FIXME: configurable?
+#[cfg(feature = "stat-garbage")]
 const GARBAGE_THRESHOLD: u32 = 256;
 
 /// Dummy backend for safe memory reclamation that leaks all retired allocations.
@@ -60,7 +66,8 @@ impl<G, V> Default for Guard<G, V> {
 
 impl<G, V: Value> smr::Guard<V> for Guard<G, V> {
     unsafe fn retire_node(&mut self, _bits: usize, _node: NonZeroU64) {
-        if cfg!(feature = "stat-garbage") {
+        #[cfg(feature = "stat-garbage")]
+        {
             GARBAGE_LOCAL.set(GARBAGE_LOCAL.get() + 1);
 
             if GARBAGE_LOCAL.get() > GARBAGE_THRESHOLD {
@@ -71,7 +78,8 @@ impl<G, V: Value> smr::Guard<V> for Guard<G, V> {
     }
 
     unsafe fn retire_value(&mut self, _value: u64) {
-        if cfg!(feature = "stat-garbage") {
+        #[cfg(feature = "stat-garbage")]
+        {
             GARBAGE_LOCAL.set(GARBAGE_LOCAL.get() + 1);
 
             if GARBAGE_LOCAL.get() > GARBAGE_THRESHOLD {

@@ -18,6 +18,8 @@ use crate::raw::node;
 use crate::sequential;
 use crate::sync::Atomic;
 
+use alloc::vec::Vec;
+
 /// Version of the typed topology interchange contract.
 pub const VERSION: u16 = 1;
 
@@ -184,7 +186,9 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+// `core::error::Error` is stable since 1.81, so this needs no `std` and no
+// feature gate.
+impl core::error::Error for Error {}
 
 mod private {
     use super::*;

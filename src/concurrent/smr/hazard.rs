@@ -18,6 +18,9 @@ use crate::concurrent::smr;
 use crate::stat;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+
 #[repr(C, align(64))]
 #[derive(Default)]
 struct Cache<T>(T);

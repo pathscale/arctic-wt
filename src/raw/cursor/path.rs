@@ -9,6 +9,8 @@ use crate::raw::key;
 use crate::raw::node;
 use crate::sync::Atomic;
 
+use alloc::vec::Vec;
+
 /// A path along the tree is composed of 0 or more path segments.
 pub(crate) struct Segment<R: key::Read> {
     /// Key before matching on `edge`

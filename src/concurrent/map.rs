@@ -116,8 +116,22 @@ pub struct Map<K: Key, V: Value, S = smr::Default> {
     /// fn assert_sync<T: Sync>() {}
     /// assert_sync::<arctic::ConcurrentMap<u64, Box<SyncNotSend>>>();
     /// ```
-    _value: PhantomData<std::sync::Mutex<V>>,
+    _value: PhantomData<MutexLike<V>>,
 }
+
+/// Stands in for `PhantomData<Mutex<V>>`, which `core` has no equivalent of.
+///
+/// The marker exists for its auto traits and nothing else: `Send` when `V` is
+/// `Send`, and `Sync` when `V` is `Send`, which is exactly what `Mutex<V>`
+/// gives. `Cell` and `UnsafeCell` are the near misses; both are never `Sync`.
+pub struct MutexLike<V>(PhantomData<V>);
+
+// SAFETY: this type holds no value. It reproduces the auto traits of the
+// `Mutex<V>` the field used to name, which is what the surrounding type is
+// asserting about itself.
+unsafe impl<V: Send> Send for MutexLike<V> {}
+// SAFETY: as above.
+unsafe impl<V: Send> Sync for MutexLike<V> {}
 
 impl<K: Key, V: Value, S: Default> Default for Map<K, V, S> {
     fn default() -> Self {

@@ -1,6 +1,7 @@
 //! Values that can safely be stored in a [`ConcurrentMap`][crate::concurrent::Map],
 //! and referenced behind an [`smr::Guard`].
 
+use alloc::borrow::ToOwned;
 use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::mem::ManuallyDrop;
@@ -9,7 +10,9 @@ use core::ops::Deref;
 use crate::concurrent::smr;
 use crate::concurrent::smr::Guard as _;
 use crate::sequential;
+
 pub use crate::sequential::value::Arc;
+use alloc::boxed::Box;
 
 /// Values that can safely be stored in a [`ConcurrentMap`][crate::concurrent::Map].
 ///
@@ -221,7 +224,7 @@ where
     V: Value,
     V::Borrowed: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.deref().fmt(f)
     }
 }
@@ -265,7 +268,7 @@ where
     V: Value,
     V::Borrowed: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.deref().fmt(f)
     }
 }
@@ -320,7 +323,7 @@ where
     V: Value,
     V::Borrowed: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Updated")
             .field("old", self.old())
             .field("new", self.new())
@@ -395,7 +398,7 @@ where
     V: Value,
     V::Borrowed: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Upserted")
             .field("old", &self.old())
             .field("new", self.new())

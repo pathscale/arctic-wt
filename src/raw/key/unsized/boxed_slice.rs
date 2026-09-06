@@ -1,11 +1,12 @@
 //! Support for owned dynamically sized keys ([`Vec<u8>`], [`Box<[u8]>`][Box]).
 
+use alloc::borrow::ToOwned;
+use alloc::ffi::CString;
 use core::borrow::Borrow;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::Deref;
 use core::ptr::NonNull;
-use std::ffi::CString;
 
 #[cfg(feature = "proptest")]
 use proptest::prelude::Strategy;
@@ -25,6 +26,9 @@ use crate::raw::key::Read as _;
 use crate::raw::key::r#unsized;
 use crate::raw::key::r#unsized::Terminate;
 use crate::raw::key::r#unsized::slice::Slice;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 /// An owned, dynamically sized key that satisfies an [`Invariant`][crate::key::unsized::Invariant].
 #[repr(transparent)]

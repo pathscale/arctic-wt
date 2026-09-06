@@ -31,8 +31,42 @@ pub(crate) use map::Map;
 pub(crate) use set::Set;
 pub(crate) use shard::Shard;
 
-pub(crate) static SIMD: std::sync::LazyLock<fearless_simd::Level> =
-    std::sync::LazyLock::new(fearless_simd::Level::new);
+pub(crate) static SIMD_LEVEL: spin::Once<fearless_simd::Level> = spin::Once::new();
+
+/// The SIMD level this machine supports, detected once.
+///
+/// This was a `std::sync::LazyLock`, which is the only reason the crate needed
+/// `std` at all in its core. `spin::Once` is the same thing without one: the
+/// detection is idempotent, so a race costs a second detection and nothing else.
+pub(crate) fn simd() -> fearless_simd::Level {
+    *SIMD_LEVEL.call_once(detect)
+}
+
+#[cfg(feature = "std")]
+fn detect() -> fearless_simd::Level {
+    fearless_simd::Level::new()
+}
+
+/// Without `std` there is no runtime feature detection: `is_x86_feature_detected`
+/// and its aarch64 twin are `std` macros. So this reports what the compiler was
+/// told to target rather than what the chip turns out to have.
+///
+/// On aarch64 that costs nothing, since Neon is baseline for the architecture.
+/// On x86 it means the scalar path unless the build asks for the instructions,
+/// with `-C target-feature=+avx2` or a `target-cpu` that implies it.
+#[cfg(not(feature = "std"))]
+fn detect() -> fearless_simd::Level {
+    #[cfg(target_arch = "aarch64")]
+    {
+        // SAFETY: Neon is mandatory on aarch64, so the feature is present on
+        // every target this arm compiles for.
+        return fearless_simd::Level::Neon(unsafe {
+            fearless_simd::aarch64::Neon::new_unchecked()
+        });
+    }
+    #[cfg(not(target_arch = "aarch64"))]
+    fearless_simd::Level::fallback()
+}
 
 /// Structural modification operation.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

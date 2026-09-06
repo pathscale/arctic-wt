@@ -68,7 +68,7 @@ impl<T: Terminate> Default for SlicePacked<T> {
 
 impl<T: ribbit::Pack> IntoIterator for SlicePacked<T> {
     type Item = u8;
-    type IntoIter = std::vec::IntoIter<u8>;
+    type IntoIter = alloc::vec::IntoIter<u8>;
     fn into_iter(self) -> Self::IntoIter {
         unsafe { self.as_slice().to_vec().into_iter() }
     }
@@ -171,13 +171,13 @@ impl<T: Terminate> PartialEq for SlicePacked<T> {
 }
 
 impl<T: Terminate> Ord for SlicePacked<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         unsafe { self.as_slice().cmp(other.as_slice()) }
     }
 }
 
 impl<T: Terminate> PartialOrd for SlicePacked<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
