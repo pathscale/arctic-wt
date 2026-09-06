@@ -31,6 +31,54 @@ pub(crate) use map::Map;
 pub(crate) use set::Set;
 pub(crate) use shard::Shard;
 
+// There once was a CPU extension called SVE. It went out to sea on an M4, and
+// it sank.
+//
+// The idea is good and it will occur to everyone who reads `node_47`. That node
+// holds up to 48 sorted keys and searching it is four 16-byte Neon compares.
+// This machine reports `hw.optional.arm.sme_max_svl_b: 64`, a 512-bit streaming
+// vector length, and 48 bytes fits in 512 bits with room left over. Four
+// instructions become one. It is the most obvious win in the crate.
+//
+// It is a 34x loss. Measured on an M4 Max, two million searches of 48 keys,
+// nanoseconds per search, all three implementations agreeing on every one of
+// the 256 possible target bytes:
+//
+//     scalar                       3.64 ns
+//     neon, 4x128-bit              0.93 ns    3.90x faster than scalar
+//     sve 512-bit, smstart once   31.62 ns    0.03x of neon
+//     sve 512-bit, per call       43.44 ns    0.02x of neon
+//
+// Read the third row before concluding it is the mode switch. That run enters
+// streaming mode **once** for all two million iterations, so `SMSTART` is
+// amortised to nothing, and it is still thirty-four times slower. Paying the
+// switch per call only takes it from 31.6 to 43.4. The instructions themselves
+// are slow here.
+//
+// Which follows from what the hardware is for. Apple built an SME unit to feed
+// a ZA tile with matrix outer products. Streaming SVE exists on it because the
+// architecture says it must, not because there is a fast general-purpose
+// 512-bit vector engine underneath. Neon is the fast path on this chip, and the
+// SME unit is a coprocessor with entirely different economics.
+//
+// Three further walls stand behind that number, any one of which is fatal on
+// its own, so do not go looking for a toolchain fix:
+//
+//   1. SVE intrinsics are nightly-only, gated on `stdarch_aarch64_sve`, and
+//      blocked on an unaccepted RFC for types whose size is not known at
+//      compile time (rust-lang/rust#145052). Merged into stdarch in April 2026
+//      and still gated on 1.96, 1.97 and 1.98.
+//   2. Apple has no non-streaming SVE. `-C target-feature=+sve` compiles
+//      cleanly, emits no SVE into this crate, and produces a binary that dies
+//      with SIGILL.
+//   3. `fearless_simd` has refused scalable vectors by design
+//      (linebender/fearless_simd#339): its whole API rests on a compile-time
+//      lane count, and the maintainer will not trade codegen on common hardware
+//      for it.
+//
+// A machine with real non-streaming SVE, a Graviton or a Grace, would answer
+// differently and none of this transfers to it. The harness is in
+// `docs/M4-SVE-perf-review.md` if you want to re-run it rather than trust this.
 pub(crate) static SIMD_LEVEL: spin::Once<fearless_simd::Level> = spin::Once::new();
 
 /// The SIMD level this machine supports, detected once.
