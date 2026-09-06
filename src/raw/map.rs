@@ -31,7 +31,7 @@ impl<K: Key> Map<K> {
     /// iterators. Destruction does not need key order, so scanning physical
     /// edge slots avoids the per-node iterator allocations used by scans.
     pub(crate) fn drain(&mut self, mut drop_value: impl FnMut(u64)) {
-        let root = std::mem::replace(self.0.get_mut_packed(), Edge::<K::Edge>::NULL);
+        let root = core::mem::replace(self.0.get_mut_packed(), Edge::<K::Edge>::NULL);
         match root.child() {
             None => {}
             Some(edge::Child::Value(value)) => drop_value(value),

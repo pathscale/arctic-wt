@@ -1,5 +1,6 @@
 //! Support for borrowed dynamically sized `&[u8]` keys.
 
+use alloc::borrow::ToOwned;
 use core::ffi::CStr;
 use core::fmt::Debug;
 use core::marker::PhantomData;
@@ -16,6 +17,8 @@ use crate::raw::key::Read as _;
 use crate::raw::key::r#unsized;
 use crate::raw::key::r#unsized::Terminate;
 use crate::raw::key::r#unsized::boxed_slice::BoxedSlice;
+
+use alloc::boxed::Box;
 
 /// # Safety
 ///

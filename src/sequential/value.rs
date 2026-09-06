@@ -1,5 +1,7 @@
+use alloc::rc::Rc;
 use core::ops::Deref;
-use std::rc::Rc;
+
+use alloc::boxed::Box;
 
 /// Values that can be safely stored in a [`SequentialMap`][crate::sequential::Map].
 ///

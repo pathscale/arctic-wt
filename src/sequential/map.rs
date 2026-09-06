@@ -1,10 +1,10 @@
 //! Auxiliary types for use with [`SequentialMap`].
 
+#[cfg_attr(not(doc), expect(unused))]
+use alloc::collections::btree_map;
 use core::marker::PhantomData;
 use core::ops::RangeFull;
 use core::ptr::NonNull;
-#[cfg_attr(not(doc), expect(unused))]
-use std::collections::btree_map;
 
 #[cfg_attr(not(doc), expect(unused))]
 use crate::SequentialMap;

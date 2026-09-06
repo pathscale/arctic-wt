@@ -18,6 +18,8 @@ use crate::raw::node::header;
 use crate::raw::node::iter::KeyIter3;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+
 const CAPACITY: usize = 3;
 
 /// [`Node`] representation that contains at most 3 key-edge pairs.

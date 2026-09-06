@@ -12,7 +12,10 @@ cfg_select! {
         pub use shuttle::sync::Arc;
     }
     _ => {
-        pub use std::sync::Arc;
+        pub use alloc::sync::Arc;
+        // Only the test modules reach for this, and a test binary has its own
+        // `std` whatever the library is built as.
+        #[cfg(any(test, feature = "std"))]
         pub use std::thread;
         pub mod atomic {
             pub use core::sync::atomic::AtomicU16;

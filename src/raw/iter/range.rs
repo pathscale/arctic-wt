@@ -24,6 +24,8 @@ use crate::raw::node::Lower as _;
 use crate::raw::node::Upper as _;
 use crate::sync::Atomic;
 
+use alloc::vec::Vec;
+
 pub(crate) enum RangeIter<'g, K: key::Read, W: key::Write<K>, R: Range<K>> {
     Root {
         writer: W,
@@ -313,7 +315,7 @@ impl<T> Default for Unbound<T> {
 }
 
 impl<T> Debug for Unbound<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Unbound")
     }
 }

@@ -6,6 +6,8 @@ use crate::concurrent::Value;
 use crate::concurrent::smr;
 use crate::stat;
 
+use alloc::boxed::Box;
+
 /// [`crossbeam_epoch::Collector`] backend for safe memory reclamation.
 ///
 /// Uses the default global collector.

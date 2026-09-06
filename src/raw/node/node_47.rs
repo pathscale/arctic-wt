@@ -27,6 +27,8 @@ use crate::raw::node::iter::KeyIter47;
 use crate::stat;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+
 const CAPACITY: usize = 47;
 
 /// [`Node`] representation that contains at most 47 key-edge pairs.
@@ -203,7 +205,7 @@ unsafe impl header::Header for Header {
         // NOTE: only writers need to ensure meta consistency
         let len = self.len();
         let indices = self.indices();
-        fearless_simd::dispatch!(*crate::raw::SIMD, simd => {
+        fearless_simd::dispatch!(crate::raw::simd(), simd => {
             Header::keys_simd(simd, indices, len, lower, upper, iter);
         })
     }
@@ -345,7 +347,7 @@ impl Header {
 }
 
 impl Debug for Header {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let meta = self.meta.load_packed(Ordering::Relaxed);
         let mut iter = KeyIter47::default();
         header::Header::keys(

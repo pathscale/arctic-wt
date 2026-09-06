@@ -1,12 +1,12 @@
 // https://github.com/Amanieu/thread_local-rs/blob/2ed68653c6ad8c41a23e9e422914aa92af5a98cd/src/thread_id.rs
 // https://github.com/ibraheemdev/seize/blob/4e746342f6b8a383234b491d3cf4cae697fdad28/src/raw/tls/thread_id.rs
 
+use alloc::collections::BinaryHeap;
 use core::cell::Cell;
 use core::cmp;
 use core::num::NonZeroUsize;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering;
-use std::collections::BinaryHeap;
 use std::sync::Mutex;
 
 thread_local! {

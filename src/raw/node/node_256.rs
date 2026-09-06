@@ -9,6 +9,8 @@ use core::ops::Deref;
 use crate::raw::node;
 use crate::raw::node::KeyIter256;
 
+use alloc::boxed::Box;
+
 const CAPACITY: usize = 256;
 
 /// [`Node`] representation that contains exactly 256 key-edge pairs.

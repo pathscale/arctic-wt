@@ -21,6 +21,8 @@ use crate::raw::node::Node;
 use crate::raw::node::header;
 use crate::sync::Atomic;
 
+use alloc::boxed::Box;
+
 const CAPACITY: usize = 15;
 
 /// [`Node`] representation that contains at most 15 key-edge pairs.
@@ -102,7 +104,7 @@ unsafe impl header::Header for Atomic<Header> {
     #[inline]
     fn get(&self, key: u8) -> Option<u8> {
         let header = self.load_packed(Ordering::Relaxed);
-        let index = fearless_simd::dispatch!(*crate::raw::SIMD, simd => header.get(simd, key));
+        let index = fearless_simd::dispatch!(crate::raw::simd(), simd => header.get(simd, key));
         (index < header.len().value()).then_some(index)
     }
 
@@ -126,7 +128,7 @@ unsafe impl header::Header for Atomic<Header> {
 
     fn keys<L: node::Lower, U: node::Upper>(&self, lower: L, upper: U, iter: &mut KeyIter15) {
         let header = self.load_packed(Ordering::Relaxed);
-        fearless_simd::dispatch!(*crate::raw::SIMD, simd => {
+        fearless_simd::dispatch!(crate::raw::simd(), simd => {
             header.keys_simd(simd, header.len(), lower, upper, iter);
         })
     }
@@ -155,7 +157,7 @@ unsafe impl header::Header for Atomic<Header> {
 impl HeaderPacked {
     #[inline]
     fn get_or_insert(&self, key: u8) -> Result<u8, Option<Self>> {
-        let index = fearless_simd::dispatch!(*crate::raw::SIMD, simd => self.get(simd, key));
+        let index = fearless_simd::dispatch!(crate::raw::simd(), simd => self.get(simd, key));
         let len = self.len().value();
 
         if index < len {

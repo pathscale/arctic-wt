@@ -9,6 +9,8 @@ use crate::raw::iter::Unbound;
 use crate::raw::node;
 use crate::sync::Atomic;
 
+use alloc::vec::Vec;
+
 pub(crate) struct PostorderIter<'g, M: ribbit::Pack> {
     order: Option<Order>,
     stack: Vec<RepeatIter<'g, M>>,
