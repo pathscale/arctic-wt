@@ -37,7 +37,11 @@ opt-membarrier = ["dep:libc", "seize/fast-barrier"]
 opt-no-path = []
 opt-no-dispatch = []
 
-smr-hazard = []
+# The hazard backend keys two thread-locals off `thread_local!` and holds its
+# free list in a `std::sync::Mutex`, in `smr/hazard/thread.rs`. Both have
+# `no_std` answers and neither is written yet, so the feature carries the
+# requirement rather than pretending otherwise.
+smr-hazard = ["std"]
 smr-epoch = ["dep:crossbeam-epoch"]
 # ps-reclaim is `std` only, so asking for it asks for `std`.
 smr-ps-reclaim = ["dep:ps-reclaim", "std"]
@@ -63,8 +67,14 @@ rand = { version = "0.10.1", optional = true }
 # `libm` unconditionally: without `std` this crate needs one of the two, and
 # `libm` is pure Rust. Arctic never calls a float operation, so this is paying
 # for a shape of the dependency rather than for anything on a path here.
+# `force_support_fallback` because the `Fallback` variant and `Level::fallback`
+# are compiled only when the target does not statically support something
+# better. Without `std` there is no runtime detection to fall back *from*, so
+# `detect` below names the variant directly and needs it to exist on every
+# target, x86-64 CI runners included.
 fearless_simd = { version = "0.6.0", default-features = false, features = [
     "libm",
+    "force_support_fallback",
 ] }
 # A `no_std` `Once` for the SIMD level, which `std::sync::LazyLock` used to hold.
 spin = { version = "0.9", default-features = false, features = ["once"] }
