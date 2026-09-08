@@ -1,6 +1,6 @@
 [package]
 name = "arctic-wt"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2024"
 description = "Lock-free adaptive radix tree"
 repository = "https://github.com/pathscale/arctic-wt"
