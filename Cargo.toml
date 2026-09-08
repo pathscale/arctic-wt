@@ -47,7 +47,7 @@ smr-epoch = ["dep:crossbeam-epoch"]
 # with it. Ask for the platform pieces it needs without `std`; arctic's own
 # `std` feature forwards `ps-reclaim/std` below, and `std` wins inside that
 # crate when both are on.
-smr-ps-reclaim = ["dep:ps-reclaim", "ps-reclaim/libc", "ps-reclaim/spin"]
+smr-ps-reclaim = ["dep:ps-reclaim", "ps-reclaim/spin"]
 smr-seize = ["dep:seize"]
 
 validate = []
@@ -62,6 +62,11 @@ crossbeam-epoch = { version = "0.9.18", optional = true }
 hdrhistogram = { version = "7.5.4", optional = true, default-features = false, features = ["serialization"] }
 libc = { version = "0.2.176", optional = true }
 proptest = { version = "1.9.0", optional = true }
+# The platform crate `ps-reclaim` needs with `std` off is per target: a
+# `pthread_key_t` on unix, an `FlsAlloc` slot on Windows. Naming `libc` in the
+# feature list picked the unix one everywhere, so a Windows build got neither
+# `std` nor `windows-sys` and the `windows_sys::` calls had no crate behind
+# them.
 ps-reclaim = { version = "^0.1, >=0.1.4", optional = true, default-features = false }
 ribbit = { version = "0.2.1", features = ["atomic-u128"] }
 seize = { version = "0.5.1", optional = true }
@@ -95,3 +100,15 @@ harness = false
 
 [profile.release]
 debug = true
+
+[target.'cfg(unix)'.dependencies.ps-reclaim]
+version = "^0.1, >=0.1.4"
+optional = true
+default-features = false
+features = ["libc"]
+
+[target.'cfg(windows)'.dependencies.ps-reclaim]
+version = "^0.1, >=0.1.4"
+optional = true
+default-features = false
+features = ["windows-sys"]
