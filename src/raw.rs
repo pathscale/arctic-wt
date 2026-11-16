@@ -99,20 +99,19 @@ fn detect() -> fearless_simd::Level {
 /// and its aarch64 twin are `std` macros. So this reports what the compiler was
 /// told to target rather than what the chip turns out to have.
 ///
-/// On aarch64 that costs nothing, since Neon is baseline for the architecture.
+/// On aarch64 Neon is selected only when the target enables it.
 /// On x86 it means the scalar path unless the build asks for the instructions,
 /// with `-C target-feature=+avx2` or a `target-cpu` that implies it.
 #[cfg(not(feature = "std"))]
 fn detect() -> fearless_simd::Level {
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
-        // SAFETY: Neon is mandatory on aarch64, so the feature is present on
-        // every target this arm compiles for.
+        // SAFETY: The target explicitly enables Neon.
         return fearless_simd::Level::Neon(unsafe {
             fearless_simd::aarch64::Neon::new_unchecked()
         });
     }
-    #[cfg(not(target_arch = "aarch64"))]
+    #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
     fearless_simd::Level::fallback()
 }
 
